@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kuitit">
+<meta name="theme-color" content="#f5f4f0">
+<title>Kuittijako</title>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #eeedea;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #1a1a18;
+    --text2: #6b6b67;
+    --text3: #a0a09b;
+    --me: #1a5fb4;
+    --me-bg: #deeaf8;
+    --wife: #813d9c;
+    --wife-bg: #f0e4f8;
+    --kids: #2d7d46;
+    --kids-bg: #d8f0e0;
+    --shared-bg: #e8e8e4;
+    --radius: 14px;
+    --radius-sm: 9px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); font-family: -apple-system, 'SF Pro Text', sans-serif; color: var(--text); overscroll-behavior: none; }
+
+  .app { display: flex; flex-direction: column; height: 100dvh; }
+
+  /* Header */
+  .header { padding: env(safe-area-inset-top, 12px) 16px 0; background: var(--bg); }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 10px; border-bottom: 0.5px solid var(--border2); }
+  .header h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.4px; }
+  .format-pill { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+  .pill-lidl { background: #deeaf8; color: #1a5fb4; }
+  .pill-sgroup { background: #d8f0e0; color: #2d7d46; }
+  .pill-plain { background: var(--surface2); color: var(--text2); }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; padding: 10px 16px; }
+  .metric { background: var(--surface); border-radius: var(--radius-sm); padding: 8px 10px; }
+  .metric-who { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 2px; }
+  .metric-receipt { font-size: 17px; font-weight: 700; line-height: 1; }
+  .metric-month { font-size: 10px; color: var(--text3); margin-top: 3px; border-top: 0.5px solid var(--border); padding-top: 3px; }
+  .metric-month span { font-weight: 600; color: var(--text2); }
+  .c-me .metric-who, .c-me .metric-receipt { color: var(--me); }
+  .c-wife .metric-who, .c-wife .metric-receipt { color: var(--wife); }
+  .c-kids .metric-who, .c-kids .metric-receipt { color: var(--kids); }
+  .c-shared .metric-who, .c-shared .metric-receipt { color: var(--text2); }
+
+  /* Tabs */
+  .tabs { display: flex; padding: 0 16px; gap: 4px; border-bottom: 0.5px solid var(--border2); }
+  .tab-btn { flex: 1; font-size: 13px; font-weight: 600; padding: 9px 4px; border: none; background: none; color: var(--text3); border-bottom: 2px solid transparent; margin-bottom: -0.5px; cursor: pointer; }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--text); }
+
+  /* Scroll area */
+  .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .pad { padding: 12px 16px; }
+
+  /* Textarea */
+  .paste-area { width: 100%; min-height: 100px; font-size: 13px; font-family: 'SF Mono', monospace; padding: 10px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); resize: none; outline: none; line-height: 1.5; }
+  .paste-area:focus { border-color: var(--me); }
+  .status-line { font-size: 12px; color: var(--text2); margin: 6px 0 10px; min-height: 16px; }
+  .status-ok { color: var(--kids); }
+  .status-warn { color: #c8822a; }
+
+  /* Items */
+  .item { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 0.5px solid var(--border); }
+  .item:last-child { border-bottom: none; }
+  .item-name { flex: 1; font-size: 14px; line-height: 1.3; }
+  .item-price { font-size: 14px; font-weight: 600; min-width: 48px; text-align: right; }
+  .badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; cursor: pointer; text-transform: uppercase; letter-spacing: 0.03em; }
+  .badge-me { background: var(--me-bg); color: var(--me); }
+  .badge-wife { background: var(--wife-bg); color: var(--wife); }
+  .badge-kids { background: var(--kids-bg); color: var(--kids); }
+  .badge-shared { background: var(--shared-bg); color: var(--text2); }
+
+  /* Save row */
+  .save-row { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: var(--bg); border-top: 0.5px solid var(--border2); }
+  .save-row label { font-size: 13px; color: var(--text2); white-space: nowrap; }
+  input[type=month] { flex: 1; font-size: 13px; padding: 8px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); outline: none; }
+  .save-btn { font-size: 13px; font-weight: 700; padding: 8px 16px; border: none; border-radius: var(--radius-sm); background: var(--kids); color: white; cursor: pointer; white-space: nowrap; }
+  .save-btn:active { opacity: 0.8; }
+
+  /* History */
+  .month-card { background: var(--surface); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; }
+  .month-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .month-name { font-size: 14px; font-weight: 700; }
+  .month-total { font-size: 14px; font-weight: 700; }
+  .bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 1px; margin-bottom: 8px; }
+  .bar-me { background: var(--me); height: 100%; }
+  .bar-wife { background: var(--wife); height: 100%; }
+  .bar-kids { background: var(--kids); height: 100%; }
+  .bar-shared { background: #b0b0aa; height: 100%; }
+  .month-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; }
+  .month-person { font-size: 12px; color: var(--text2); display: flex; justify-content: space-between; }
+  .month-person span { font-weight: 600; color: var(--text); }
+  .del-month { font-size: 12px; color: var(--text3); background: none; border: 0.5px solid var(--border2); border-radius: 6px; padding: 2px 8px; cursor: pointer; margin-top: 8px; width: 100%; }
+  .del-month:active { background: #fee2e2; color: #c0392b; border-color: #c0392b; }
+
+  /* Rules */
+  .rule-section { margin-bottom: 16px; }
+  .rule-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  .rule-label.lme{color:var(--me);} .rule-label.lwife{color:var(--wife);} .rule-label.lkids{color:var(--kids);}
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
+  .tag { font-size: 12px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 7px; padding: 4px 10px; cursor: pointer; color: var(--text); }
+  .tag:active { background: #fee2e2; }
+  .rule-input { width: 100%; font-size: 14px; padding: 9px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); outline: none; }
+  .rule-input:focus { border-color: var(--me); }
+
+  .empty { text-align: center; color: var(--text3); font-size: 14px; padding: 32px 0; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text2); }
+  .legend-dot { width: 9px; height: 9px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-inner">
+      <h1>Kuittijako</h1>
+      <span id="format-badge"></span>
+    </div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric c-me">
+      <div class="metric-who">Minä</div>
+      <div class="metric-receipt" id="r-me">—</div>
+      <div class="metric-month">kk <span id="m-me">€0</span></div>
+    </div>
+    <div class="metric c-wife">
+      <div class="metric-who">Vaimo</div>
+      <div class="metric-receipt" id="r-wife">—</div>
+      <div class="metric-month">kk <span id="m-wife">€0</span></div>
+    </div>
+    <div class="metric c-kids">
+      <div class="metric-who">Lapset</div>
+      <div class="metric-receipt" id="r-kids">—</div>
+      <div class="metric-month">kk <span id="m-kids">€0</span></div>
+    </div>
+    <div class="metric c-shared">
+      <div class="metric-who">Yhteiset</div>
+      <div class="metric-receipt" id="r-shared">—</div>
+      <div class="metric-month">kk <span id="m-shared">€0</span></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('parse')">Kuitti</button>
+    <button class="tab-btn" onclick="showTab('rules')">Säännöt</button>
+    <button class="tab-btn" onclick="showTab('history')">Historia</button>
+  </div>
+
+  <div class="content" id="content-parse">
+    <div class="pad">
+      <textarea class="paste-area" id="receipt-input" placeholder="Liitä Lidl- tai S-ryhmän kuitti tähän..." oninput="onInput()"></textarea>
+      <div class="status-line" id="status">Odottaa kuittia…</div>
+      <div id="item-list"></div>
+    </div>
+  </div>
+
+  <div class="content" id="content-rules" style="display:none">
+    <div class="pad">
+      <div class="rule-section">
+        <div class="rule-label lme">Minä</div>
+        <div class="tags" id="tags-me"></div>
+        <input class="rule-input" placeholder="Lisää avainsana + Enter" onkeydown="addRule(event,'me')">
+      </div>
+      <div class="rule-section">
+        <div class="rule-label lwife">Vaimo</div>
+        <div class="tags" id="tags-wife"></div>
+        <input class="rule-input" placeholder="Lisää avainsana + Enter" onkeydown="addRule(event,'wife')">
+      </div>
+      <div class="rule-section">
+        <div class="rule-label lkids">Lapset</div>
+        <div class="tags" id="tags-kids"></div>
+        <input class="rule-input" placeholder="Lisää avainsana + Enter" onkeydown="addRule(event,'kids')">
+      </div>
+    </div>
+  </div>
+
+  <div class="content" id="content-history" style="display:none">
+    <div class="pad">
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--me)"></div>Minä</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--wife)"></div>Vaimo</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--kids)"></div>Lapset</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#b0b0aa"></div>Yhteiset</div>
+      </div>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <div id="save-bar" style="display:none">
+    <div class="save-row">
+      <label>Kuukausi:</label>
+      <input type="month" id="month-pick">
+      <button class="save-btn" onclick="saveToHistory()">Tallenna</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let rules = {
+  me: ['carlsberg','karhu','lapin kulta','olvi','siider','viski','whisky','gin','vodka','olut','beer','chips','sipsit','fazer musta','salmiakki','protein','proteiini','whey','kreatiini','raejuusto','cottage cheese','milbona','leipä','bread','ruisleipä','hapankorppu','näkkileipä','kaura','oats','mysli','graham','isopaahto'],
+  wife: ['lumene','yves','nivea','dove','shampoo','hoitoaine','conditioner','kasvovoide','maskara','meikkivoide','parfyymi','kahvi','coffee','espresso','paulig','juhla mokka','presidentti','nescafe'],
+  kids: ['pampers','huggies','libero','vaippa','wipes','lastenruoka','piltti','heinz baby','hipp','lego','värikynä','päärynäjogurtti','semper','mehukatti']
+};
+let items = [], history = {}, parseTimer = null;
+
+try { const r = localStorage.getItem('gh_rules'); if(r) rules = JSON.parse(r); } catch(e){}
+try { const h = localStorage.getItem('gh_history'); if(h) history = JSON.parse(h); } catch(e){}
+
+function curMonth() {
+  const n = new Date();
+  return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+}
+document.getElementById('month-pick').value = curMonth();
+document.getElementById('month-pick').max = curMonth();
+
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
+
+function assign(name) {
+  const low = name.toLowerCase();
+  for(const o of ['me','wife','kids']) if(rules[o].some(k=>low.includes(k.toLowerCase()))) return o;
+  return 'shared';
+}
+
+function isLidl(t) { return /lidl/i.test(t) || (/\d[,.]\d{2}\s+[AB]\b/.test(t) && /yhteensä/i.test(t)); }
+function isSGroup(t) { return /HOK-Elanto|S-market|Alepa|Prisma|Sale\b|Foodie|asiakasomistaj/i.test(t) || (/\*[A-ZÄÖÅ].+\d[,.]\d{2}\s*\*/.test(t) && /yhteensä/i.test(t)); }
+
+function parseLidl(text) {
+  const lines = text.split('\n'), parsed = [];
+  const iRe = /^(.+?)\s+([\d,]+)\s+[AB]\s*$/i, dRe = /^\s*alennus/i;
+  const skip = /^(yhteensä|korttimaksu|käteinen|vaihtoraha|logo|y-tunnus|palautusohje|alv|kiitos|vastaa|www\.|purchase|total|approved|debit|contactless|auth|tvr|tsi|arc|atc|aed|arqc|ref|mid|tid|aid|psn|cvm|─+|={3,}|-{3,}|\s*$)/i;
+  let dateKey = null;
+  const dm = text.match(/(\d{2})\.(\d{2})\.(\d{2,4})\s+\d{2}:\d{2}/);
+  if(dm) { let y=dm[3]; if(y.length===2)y='20'+y; dateKey=y+'-'+dm[2].padStart(2,'0'); }
+  let i=0;
+  while(i<lines.length) {
+    const line=lines[i].trim();
+    if(skip.test(line)){i++;continue;}
+    const m=line.match(iRe);
+    if(m){
+      let name=m[1].trim(), price=parseFloat(m[2].replace(',','.'));
+      const next=lines[i+1]?lines[i+1].trim():'';
+      if(dRe.test(next)){const d=next.match(/([\d,]+)\s*$/);if(d)price=Math.round((price-Math.abs(parseFloat(d[1].replace(',','.'))))*100)/100;i++;}
+      if(price>0) parsed.push({name,price,owner:assign(name)});
+    }
+    i++;
+  }
+  return {items:parsed,dateKey};
+}
+
+function parseSGroup(text) {
+  const lines=text.split('\n'), parsed=[];
+  let dateKey=null;
+  const dm=text.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})\s+\d{2}:\d{2}/);
+  if(dm) dateKey=dm[3]+'-'+dm[2].padStart(2,'0');
+  const stop=/^-{5,}|yhteensä|bonusta|jäsennumero|bonustapahtuma|tid:|korttityyppi|kortti:|aid:|syöttötila|cvm|auth\.|viite:|hyväksytty|alv\s|veroton|verollinen|vaikuta|palvelemme/i;
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(!line||stop.test(line)) continue;
+    const m=line.match(/^\*(.+?)\s+([\d,]+)\s*\*\s*$/);
+    if(m){
+      const name=m[1].trim(), price=parseFloat(m[2].replace(',','.'));
+      const next=lines[i+1]?lines[i+1].trim():'';
+      if(/^\d+\s+KPL/i.test(next)) i++;
+      if(price>0&&price<500) parsed.push({name,price,owner:assign(name)});
+    }
+  }
+  return {items:parsed,dateKey};
+}
+
+function parsePlain(text) {
+  const parsed=[];
+  text.split('\n').forEach(line=>{
+    const m=line.trim().match(/^(.+?)\s+([\d,.]+)\s*€?\s*$/);
+    if(m){const p=parseFloat(m[2].replace(',','.'));if(!isNaN(p)&&p<500)parsed.push({name:m[1].trim(),price:p,owner:assign(m[1].trim())});}
+  });
+  return {items:parsed,dateKey:null};
+}
+
+function detect(text) {
+  if(!text.trim()) return null;
+  if(isSGroup(text)){const r=parseSGroup(text);r.format='sgroup';return r;}
+  if(isLidl(text)){const r=parseLidl(text);r.format='lidl';return r;}
+  const r=parsePlain(text);r.format='plain';return r;
+}
+
+function onInput() {
+  clearTimeout(parseTimer);
+  parseTimer=setTimeout(()=>{
+    const text=document.getElementById('receipt-input').value;
+    if(!text.trim()){
+      setStatus('Odottaa kuittia…','');
+      setBadge(null); items=[];
+      renderItems(); refreshMetrics();
+      document.getElementById('save-bar').style.display='none';
+      return;
+    }
+    const res=detect(text);
+    if(!res||!res.items.length){setStatus('Ei tunnistettu — kokeile muotoa "Tuote 1.99"','warn');setBadge(null);return;}
+    items=res.items; setBadge(res.format);
+    document.getElementById('month-pick').value=res.dateKey||curMonth();
+    renderItems(); refreshMetrics();
+    setStatus(items.length+' tuotetta tunnistettu'+(res.dateKey?' · '+res.dateKey:''),'ok');
+    document.getElementById('save-bar').style.display='';
+  },400);
+}
+
+function setStatus(msg,cls){const el=document.getElementById('status');el.textContent=msg;el.className='status-line'+(cls?' status-'+cls:'');}
+function setBadge(fmt){
+  const el=document.getElementById('format-badge');
+  if(fmt==='lidl') el.innerHTML='<span class="format-pill pill-lidl">Lidl</span>';
+  else if(fmt==='sgroup') el.innerHTML='<span class="format-pill pill-sgroup">S-ryhmä</span>';
+  else if(fmt==='plain') el.innerHTML='<span class="format-pill pill-plain">Vapaa</span>';
+  else el.innerHTML='';
+}
+
+const OWNERS=['me','wife','kids','shared'];
+function nextOwner(o){return OWNERS[(OWNERS.indexOf(o)+1)%OWNERS.length];}
+
+function renderItems(){
+  const el=document.getElementById('item-list');
+  if(!items.length){el.innerHTML='';return;}
+  el.innerHTML=items.map((it,i)=>`
+    <div class="item">
+      <div class="item-name">${esc(it.name)}</div>
+      <span class="badge badge-${it.owner}" onclick="cycleOwner(${i})">${labelFor(it.owner)}</span>
+      <div class="item-price">€${it.price.toFixed(2)}</div>
+    </div>`).join('');
+}
+
+function labelFor(o){return{me:'Minä',wife:'Vaimo',kids:'Lapset',shared:'Yhteinen'}[o];}
+function cycleOwner(i){items[i].owner=nextOwner(items[i].owner);renderItems();refreshMetrics();}
+
+function refreshMetrics(){
+  const monthly=history[curMonth()]||{me:0,wife:0,kids:0,shared:0};
+  const receipt={me:0,wife:0,kids:0,shared:0};
+  items.forEach(it=>receipt[it.owner]+=it.price);
+  const has=items.length>0;
+  ['me','wife','kids','shared'].forEach(o=>{
+    document.getElementById('r-'+o).textContent=has?'€'+receipt[o].toFixed(2):'—';
+    document.getElementById('m-'+o).textContent='€'+(monthly[o]||0).toFixed(2);
+  });
+}
+
+function saveToHistory(){
+  const key=document.getElementById('month-pick').value;
+  if(!key||!items.length) return;
+  const t={me:0,wife:0,kids:0,shared:0};
+  items.forEach(it=>t[it.owner]+=it.price);
+  if(!history[key]) history[key]={me:0,wife:0,kids:0,shared:0};
+  ['me','wife','kids','shared'].forEach(o=>history[key][o]=+((history[key][o]||0)+t[o]).toFixed(2));
+  save('gh_history',history);
+  setStatus('Tallennettu: '+key,'ok');
+  document.getElementById('save-bar').style.display='none';
+  document.getElementById('receipt-input').value='';
+  setBadge(null); items=[];
+  renderItems(); refreshMetrics();
+}
+
+function deleteMonth(key){delete history[key];save('gh_history',history);renderHistory();refreshMetrics();}
+
+function renderHistory(){
+  const el=document.getElementById('history-list');
+  const keys=Object.keys(history).sort().reverse();
+  if(!keys.length){el.innerHTML='<p class="empty">Ei tallennettuja kuitteja.</p>';return;}
+  el.innerHTML=keys.map(k=>{
+    const h=history[k],total=h.me+h.wife+h.kids+h.shared;
+    if(!total)return'';
+    const p=o=>total?Math.max(h[o]/total*100,0).toFixed(1):0;
+    const lbl=k===curMonth()?k+' (nykyinen)':k;
+    return`<div class="month-card">
+      <div class="month-head"><span class="month-name">${lbl}</span><span class="month-total">€${total.toFixed(2)}</span></div>
+      <div class="bar">
+        <div class="bar-me" style="width:${p('me')}%"></div>
+        <div class="bar-wife" style="width:${p('wife')}%"></div>
+        <div class="bar-kids" style="width:${p('kids')}%"></div>
+        <div class="bar-shared" style="width:${p('shared')}%"></div>
+      </div>
+      <div class="month-detail">
+        <div class="month-person">Minä <span>€${h.me.toFixed(2)}</span></div>
+        <div class="month-person">Vaimo <span>€${h.wife.toFixed(2)}</span></div>
+        <div class="month-person">Lapset <span>€${h.kids.toFixed(2)}</span></div>
+        <div class="month-person">Yhteiset <span>€${h.shared.toFixed(2)}</span></div>
+      </div>
+      <button class="del-month" onclick="deleteMonth('${k}')">Poista kuukausi</button>
+    </div>`;
+  }).join('');
+}
+
+function renderRuleTags(){
+  ['me','wife','kids'].forEach(own=>{
+    document.getElementById('tags-'+own).innerHTML=rules[own].map((k,i)=>`<span class="tag" onclick="removeRule('${own}',${i})">${esc(k)} ×</span>`).join('');
+  });
+}
+function removeRule(own,i){rules[own].splice(i,1);save('gh_rules',rules);renderRuleTags();}
+function addRule(e,own){
+  if(e.key!=='Enter')return;
+  const val=e.target.value.trim().toLowerCase();
+  if(val&&!rules[own].includes(val)){rules[own].push(val);save('gh_rules',rules);}
+  e.target.value='';renderRuleTags();
+}
+
+function showTab(t){
+  ['parse','rules','history'].forEach((n,i)=>{
+    document.getElementById('content-'+n).style.display=n===t?'':'none';
+    document.querySelectorAll('.tab-btn')[i].className='tab-btn'+(n===t?' active':'');
+  });
+  document.getElementById('save-bar').style.display=(t==='parse'&&items.length)?'':'none';
+  if(t==='rules') renderRuleTags();
+  if(t==='history') renderHistory();
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+refreshMetrics();
+</script>
+</body>
+</html>
