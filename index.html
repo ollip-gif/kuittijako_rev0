@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kuitit">
+<meta name="theme-color" content="#f5f4f0">
+<title>Kuittijako</title>
+<style>
+  :root {
+    --bg: #f0efe9;
+    --surface: #ffffff;
+    --surface2: #e8e7e2;
+    --border: rgba(0,0,0,0.07);
+    --border2: rgba(0,0,0,0.13);
+    --text: #1a1a18;
+    --text2: #6b6b67;
+    --text3: #a8a8a2;
+    --me: #1a5fb4;
+    --me-bg: #deeaf8;
+    --wife: #813d9c;
+    --wife-bg: #f0e4f8;
+    --kids: #2d7d46;
+    --kids-bg: #d8f0e0;
+    --shared: #7a7a74;
+    --shared-bg: #e4e4e0;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html,body { height: 100%; background: var(--bg); font-family: -apple-system,'SF Pro Text',sans-serif; color: var(--text); overscroll-behavior: none; }
+
+  /* ── Layout ── */
+  .app { display: flex; flex-direction: column; height: 100dvh; }
+  .header { padding-top: calc(var(--safe-top) + 10px); background: var(--bg); padding-left: 16px; padding-right: 16px; padding-bottom: 0; flex-shrink: 0; }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 0.5px solid var(--border2); }
+  .header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .tabs { display: flex; gap: 2px; background: var(--bg); padding: 0 16px; flex-shrink: 0; border-bottom: 0.5px solid var(--border2); }
+  .tab-btn { flex: 1; font-size: 13px; font-weight: 600; padding: 9px 4px; border: none; background: none; color: var(--text3); border-bottom: 2px solid transparent; margin-bottom: -0.5px; cursor: pointer; }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--text); }
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .pad { padding: 12px 16px calc(12px + var(--safe-bot)); }
+
+  /* ── Metrics ── */
+  .metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; padding: 10px 16px 6px; flex-shrink: 0; }
+  .metric { background: var(--surface); border-radius: var(--radius-sm); padding: 8px 8px 7px; }
+  .mw { font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+  .mr { font-size: 16px; font-weight: 700; line-height: 1.15; margin-top: 1px; }
+  .mm { font-size: 10px; color: var(--text3); margin-top: 3px; padding-top: 3px; border-top: 0.5px solid var(--border); }
+  .mm b { color: var(--text2); font-weight: 600; }
+  .c-me .mw,.c-me .mr{color:var(--me);}
+  .c-wife .mw,.c-wife .mr{color:var(--wife);}
+  .c-kids .mw,.c-kids .mr{color:var(--kids);}
+  .c-shared .mw,.c-shared .mr{color:var(--shared);}
+
+  /* ── Format badge ── */
+  .fmt { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .fmt-lidl{background:#deeaf8;color:#1a5fb4;}
+  .fmt-sgroup{background:#d8f0e0;color:#2d7d46;}
+  .fmt-plain{background:var(--surface2);color:var(--text2);}
+
+  /* ── Parse tab ── */
+  .paste-wrap { position: relative; }
+  textarea { width: 100%; min-height: 90px; font-size: 13px; font-family: 'SF Mono',monospace; padding: 10px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); resize: none; outline: none; line-height: 1.5; }
+  textarea:focus { border-color: var(--me); }
+  .clear-btn { position: absolute; top: 8px; right: 8px; font-size: 18px; color: var(--text3); background: none; border: none; cursor: pointer; line-height: 1; padding: 2px 4px; }
+  .status-line { font-size: 12px; color: var(--text2); margin: 6px 0 8px; min-height: 16px; }
+  .status-ok{color:var(--kids);} .status-warn{color:#c8822a;}
+
+  .item-row { display: flex; align-items: center; gap: 7px; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+  .item-row:last-child{border-bottom:none;}
+  .iname { flex: 1; font-size: 14px; line-height: 1.3; }
+  .iprice { font-size: 14px; font-weight: 600; min-width: 46px; text-align: right; }
+  .badge { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 20px; white-space: nowrap; cursor: pointer; text-transform: uppercase; letter-spacing: 0.04em; user-select: none; }
+  .b-me{background:var(--me-bg);color:var(--me);}
+  .b-wife{background:var(--wife-bg);color:var(--wife);}
+  .b-kids{background:var(--kids-bg);color:var(--kids);}
+  .b-shared{background:var(--shared-bg);color:var(--shared);}
+
+  /* Save bar */
+  .save-bar { flex-shrink: 0; background: var(--bg); border-top: 0.5px solid var(--border2); padding: 10px 16px calc(10px + var(--safe-bot)); display: flex; gap: 8px; align-items: center; }
+  .save-bar label{font-size:13px;color:var(--text2);white-space:nowrap;}
+  input[type=month]{flex:1;font-size:13px;padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);outline:none;}
+  .save-btn{font-size:13px;font-weight:800;padding:8px 18px;border:none;border-radius:var(--radius-sm);background:var(--kids);color:white;cursor:pointer;white-space:nowrap;}
+  .save-btn:active{opacity:.8;}
+
+  /* ── Receipts tab ── */
+  .receipt-card { background: var(--surface); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; }
+  .rc-head { display: flex; align-items: flex-start; justify-content: space-between; }
+  .rc-store { font-size: 14px; font-weight: 700; }
+  .rc-date { font-size: 12px; color: var(--text2); margin-top: 1px; }
+  .rc-total { font-size: 16px; font-weight: 800; text-align: right; }
+  .rc-total small { display: block; font-size: 10px; font-weight: 400; color: var(--text3); }
+  .rc-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin: 8px 0; gap: 1px; }
+  .rc-bar div { height: 100%; }
+  .rc-toggle { font-size: 12px; color: var(--me); background: none; border: none; cursor: pointer; padding: 4px 0; font-weight: 600; }
+  .rc-items { margin-top: 8px; border-top: 0.5px solid var(--border); display: none; }
+  .rc-items.open { display: block; }
+  .rc-item { display: flex; align-items: center; gap: 7px; padding: 7px 0; border-bottom: 0.5px solid var(--border); }
+  .rc-item:last-child{border-bottom:none;}
+  .rc-iname{flex:1;font-size:13px;}
+  .rc-iprice{font-size:13px;font-weight:600;min-width:42px;text-align:right;}
+  .rc-actions { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 0.5px solid var(--border); }
+  .rc-del { flex: 1; font-size: 12px; color: #c0392b; background: #fee2e2; border: none; border-radius: 8px; padding: 7px; cursor: pointer; font-weight: 600; }
+  .rc-del:active{opacity:.8;}
+
+  /* ── History tab ── */
+  .month-card { background: var(--surface); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; }
+  .mh { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .mh-label { font-size: 14px; font-weight: 700; }
+  .mh-total { font-size: 15px; font-weight: 800; }
+  .mbar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 1px; margin-bottom: 8px; }
+  .mbar-me{background:var(--me);height:100%;}
+  .mbar-wife{background:var(--wife);height:100%;}
+  .mbar-kids{background:var(--kids);height:100%;}
+  .mbar-shared{background:#b0b0a8;height:100%;}
+  .mdetail { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; }
+  .mperson { font-size: 12px; color: var(--text2); display: flex; justify-content: space-between; }
+  .mperson b { color: var(--text); font-weight: 700; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text2); }
+  .ldot { width: 9px; height: 9px; border-radius: 2px; }
+
+  /* ── Rules tab ── */
+  .rule-sec { margin-bottom: 16px; }
+  .rl { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  .rl.lme{color:var(--me);} .rl.lwife{color:var(--wife);} .rl.lkids{color:var(--kids);}
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 7px; }
+  .tag { font-size: 12px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 7px; padding: 4px 10px; cursor: pointer; }
+  .tag:active{background:#fee2e2;}
+  .rule-input { width: 100%; font-size: 14px; padding: 9px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); outline: none; }
+  .rule-input:focus{border-color:var(--me);}
+
+  .empty{text-align:center;color:var(--text3);font-size:14px;padding:32px 0;}
+  .section-note{font-size:12px;color:var(--text3);margin-bottom:10px;}
+  .month-group { margin-bottom: 4px; }
+  .mg-header { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 2px 6px; }
+  .mg-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text2); }
+  .mg-total { font-size: 13px; font-weight: 700; color: var(--text2); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-inner">
+      <h1>Kuittijako</h1>
+      <span id="fmt-badge"></span>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics">
+    <div class="metric c-me"><div class="mw">Minä</div><div class="mr" id="r-me">—</div><div class="mm">kk <b id="m-me">€0</b></div></div>
+    <div class="metric c-wife"><div class="mw">Vaimo</div><div class="mr" id="r-wife">—</div><div class="mm">kk <b id="m-wife">€0</b></div></div>
+    <div class="metric c-kids"><div class="mw">Lapset</div><div class="mr" id="r-kids">—</div><div class="mm">kk <b id="m-kids">€0</b></div></div>
+    <div class="metric c-shared"><div class="mw">Yhteiset</div><div class="mr" id="r-shared">—</div><div class="mm">kk <b id="m-shared">€0</b></div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('parse')">Kuitti</button>
+    <button class="tab-btn" onclick="showTab('receipts')">Kuitit</button>
+    <button class="tab-btn" onclick="showTab('history')">Historia</button>
+    <button class="tab-btn" onclick="showTab('rules')">Säännöt</button>
+  </div>
+
+  <!-- PARSE -->
+  <div class="scroll" id="tab-parse">
+    <div class="pad">
+      <div class="paste-wrap">
+        <textarea id="receipt-input" placeholder="Liitä Lidl- tai S-ryhmän kuitti tähän…" oninput="onInput()"></textarea>
+        <button class="clear-btn" onclick="clearInput()">×</button>
+      </div>
+      <div class="status-line" id="status">Odottaa kuittia…</div>
+      <div id="item-list"></div>
+    </div>
+  </div>
+
+  <!-- RECEIPTS (database) -->
+  <div class="scroll" id="tab-receipts" style="display:none">
+    <div class="pad">
+      <p class="section-note">Kaikki tallennetut kuitit. Napauta riviä muuttaaksesi henkilöä.</p>
+      <div id="receipts-list"></div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="scroll" id="tab-history" style="display:none">
+    <div class="pad">
+      <div class="legend">
+        <div class="legend-item"><div class="ldot" style="background:var(--me)"></div>Minä</div>
+        <div class="legend-item"><div class="ldot" style="background:var(--wife)"></div>Vaimo</div>
+        <div class="legend-item"><div class="ldot" style="background:var(--kids)"></div>Lapset</div>
+        <div class="legend-item"><div class="ldot" style="background:#b0b0a8"></div>Yhteiset</div>
+      </div>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- RULES -->
+  <div class="scroll" id="tab-rules" style="display:none">
+    <div class="pad">
+      <div class="rule-sec">
+        <div class="rl lme">Minä</div>
+        <div class="tags" id="tags-me"></div>
+        <input class="rule-input" placeholder="Lisää avainsana + Enter" onkeydown="addRule(event,'me')">
+      </div>
+      <div class="rule-sec">
+        <div class="rl lwife">Vaimo</div>
+        <div class="tags" id="tags-wife"></div>
+        <input class="rule-input" placeholder="Lisää avainsana + Enter" onkeydown="addRule(event,'wife')">
+      </div>
+      <div class="rule-sec">
+        <div class="rl lkids">Lapset</div>
+        <div class="tags" id="tags-kids"></div>
+        <input class="rule-input" placeholder="Lisää avainsana + Enter" onkeydown="addRule(event,'kids')">
+      </div>
+    </div>
+  </div>
+
+  <!-- Save bar -->
+  <div class="save-bar" id="save-bar" style="display:none">
+    <label>Kuukausi:</label>
+    <input type="month" id="month-pick">
+    <button class="save-btn" onclick="saveReceipt()">Tallenna</button>
+  </div>
+
+</div>
+<script>
+// ── State ──
+let rules = {
+  me: ['carlsberg','karhu','lapin kulta','olvi','siider','viski','whisky','gin','vodka','olut','beer','chips','sipsit','fazer musta','salmiakki','protein','proteiini','whey','kreatiini','raejuusto','cottage cheese','milbona','leipä','bread','ruisleipä','hapankorppu','näkkileipä','kaura','oats','mysli','graham','isopaahto'],
+  wife: ['lumene','yves','nivea','dove','shampoo','hoitoaine','conditioner','kasvovoide','maskara','meikkivoide','parfyymi','kahvi','coffee','espresso','paulig','juhla mokka','presidentti','nescafe'],
+  kids: ['pampers','huggies','libero','vaippa','wipes','lastenruoka','piltti','heinz baby','hipp','lego','värikynä','päärynäjogurtti','semper','mehukatti']
+};
+
+// receipts: array of { id, store, date, month, items: [{name, price, owner}] }
+let receipts = [];
+let currentItems = [];
+let parseTimer = null;
+const OWNERS = ['me','wife','kids','shared'];
+
+function load() {
+  try { const r = localStorage.getItem('gh_rules'); if(r) rules = JSON.parse(r); } catch(e){}
+  try { const r = localStorage.getItem('gh_receipts'); if(r) receipts = JSON.parse(r); } catch(e){}
+  // migrate old gh_history if receipts is empty
+  try {
+    if(receipts.length === 0) {
+      const old = localStorage.getItem('gh_history');
+      if(old) { /* old data had only sums, can't migrate rows — skip */ }
+    }
+  } catch(e){}
+}
+load();
+
+function persist() { try { localStorage.setItem('gh_receipts', JSON.stringify(receipts)); } catch(e){ alert('Tallennus epäonnistui — selain saattaa olla yksityistila.'); } }
+function persistRules() { try { localStorage.setItem('gh_rules', JSON.stringify(rules)); } catch(e){} }
+
+// ── Helpers ──
+function curMonth() { const n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0'); }
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+function assign(name) {
+  const low = name.toLowerCase();
+  for(const o of ['me','wife','kids']) if(rules[o].some(k=>low.includes(k.toLowerCase()))) return o;
+  return 'shared';
+}
+
+function label(o){ return {me:'Minä',wife:'Vaimo',kids:'Lapset',shared:'Yhteinen'}[o]||o; }
+function badgeClass(o){ return {me:'b-me',wife:'b-wife',kids:'b-kids',shared:'b-shared'}[o]||'b-shared'; }
+function nextOwner(o){ return OWNERS[(OWNERS.indexOf(o)+1)%OWNERS.length]; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function monthTotals(month) {
+  const t={me:0,wife:0,kids:0,shared:0};
+  receipts.filter(r=>r.month===month).forEach(r=>r.items.forEach(it=>t[it.owner]=(t[it.owner]||0)+it.price));
+  return t;
+}
+function allMonths() { return [...new Set(receipts.map(r=>r.month))].sort().reverse(); }
+
+// ── Parsing ──
+function isLidl(t){ return /lidl/i.test(t)||(/\d[,.]\d{2}\s+[AB]\b/.test(t)&&/yhteensä/i.test(t)); }
+function isSGroup(t){ return /HOK-Elanto|S-market|Alepa|Prisma|Sale\b|Foodie|asiakasomistaj/i.test(t)||(/\*[A-ZÄÖÅ].+\d[,.]\d{2}\s*\*/.test(t)&&/yhteensä/i.test(t)); }
+
+function detectStore(text) {
+  if(/alepa/i.test(text)) return 'Alepa';
+  if(/s-market/i.test(text)) return 'S-market';
+  if(/prisma/i.test(text)) return 'Prisma';
+  if(/sale\b/i.test(text)) return 'Sale';
+  if(/hok-elanto/i.test(text)) return 'HOK-Elanto';
+  if(/lidl/i.test(text)) return 'Lidl';
+  return 'Kauppa';
+}
+
+function parseLidl(text) {
+  const lines=text.split('\n'), parsed=[];
+  const iRe=/^(.+?)\s+([\d,]+)\s+[AB]\s*$/i, dRe=/^\s*alennus/i;
+  const skip=/^(yhteensä|korttimaksu|käteinen|vaihtoraha|logo|y-tunnus|palautusohje|alv|kiitos|vastaa|www\.|purchase|total|approved|debit|contactless|auth|tvr|tsi|arc|atc|aed|arqc|ref|mid|tid|aid|psn|cvm|─+|={3,}|-{3,}|\s*$)/i;
+  let dateKey=null, dateStr=null;
+  const dm=text.match(/(\d{2})\.(\d{2})\.(\d{2,4})\s+\d{2}:\d{2}/);
+  if(dm){let y=dm[3];if(y.length===2)y='20'+y;dateKey=y+'-'+dm[2].padStart(2,'0');dateStr=dm[1]+'.'+dm[2]+'.'+y;}
+  let i=0;
+  while(i<lines.length){
+    const line=lines[i].trim();
+    if(skip.test(line)){i++;continue;}
+    const m=line.match(iRe);
+    if(m){
+      let name=m[1].trim(),price=parseFloat(m[2].replace(',','.'));
+      const next=lines[i+1]?lines[i+1].trim():'';
+      if(dRe.test(next)){const d=next.match(/([\d,]+)\s*$/);if(d)price=Math.round((price-Math.abs(parseFloat(d[1].replace(',','.'))))*100)/100;i++;}
+      if(price>0) parsed.push({name,price,owner:assign(name)});
+    }
+    i++;
+  }
+  return {items:parsed,dateKey,dateStr};
+}
+
+function parseSGroup(text) {
+  const lines=text.split('\n'),parsed=[];
+  let dateKey=null,dateStr=null;
+  const dm=text.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})\s+\d{2}:\d{2}/);
+  if(dm){dateKey=dm[3]+'-'+dm[2].padStart(2,'0');dateStr=dm[1]+'.'+dm[2]+'.'+dm[3];}
+  const stop=/^-{5,}|yhteensä|bonusta|jäsennumero|bonustapahtuma|tid:|korttityyppi|kortti:|aid:|syöttötila|cvm|auth\.|viite:|hyväksytty|alv\s|veroton|verollinen|vaikuta|palvelemme/i;
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(!line||stop.test(line)) continue;
+    const m=line.match(/^\*(.+?)\s+([\d,]+)\s*\*\s*$/);
+    if(m){
+      const name=m[1].trim(),price=parseFloat(m[2].replace(',','.'));
+      if(/^\d+\s+KPL/i.test((lines[i+1]||'').trim())) i++;
+      if(price>0&&price<500) parsed.push({name,price,owner:assign(name)});
+    }
+  }
+  return {items:parsed,dateKey,dateStr};
+}
+
+function parsePlain(text){
+  const parsed=[];
+  text.split('\n').forEach(line=>{
+    const m=line.trim().match(/^(.+?)\s+([\d,.]+)\s*€?\s*$/);
+    if(m){const p=parseFloat(m[2].replace(',','.'));if(!isNaN(p)&&p<500)parsed.push({name:m[1].trim(),price:p,owner:assign(m[1].trim())});}
+  });
+  return {items:parsed,dateKey:null,dateStr:null};
+}
+
+function detect(text){
+  if(!text.trim()) return null;
+  let res,fmt;
+  if(isSGroup(text)){res=parseSGroup(text);fmt='sgroup';}
+  else if(isLidl(text)){res=parseLidl(text);fmt='lidl';}
+  else{res=parsePlain(text);fmt='plain';}
+  res.format=fmt;
+  res.store=detectStore(text);
+  return res;
+}
+
+// ── Parse tab ──
+function onInput(){
+  clearTimeout(parseTimer);
+  parseTimer=setTimeout(()=>{
+    const text=document.getElementById('receipt-input').value;
+    if(!text.trim()){resetParse();return;}
+    const res=detect(text);
+    if(!res||!res.items.length){setStatus('Ei tunnistettu — kokeile muotoa "Tuote 1.99"','warn');setBadge(null);return;}
+    currentItems=res.items.map(it=>({...it}));
+    setBadge(res.format);
+    document.getElementById('month-pick').value=res.dateKey||curMonth();
+    document.getElementById('save-bar').style.display='';
+    renderCurrentItems();
+    refreshMetrics();
+    setStatus(currentItems.length+' tuotetta tunnistettu'+(res.dateStr?' · '+res.dateStr:''),'ok');
+    window._parsedMeta={store:res.store,dateStr:res.dateStr,dateKey:res.dateKey};
+  },350);
+}
+
+function resetParse(){
+  setStatus('Odottaa kuittia…','');setBadge(null);
+  currentItems=[];renderCurrentItems();refreshMetrics();
+  document.getElementById('save-bar').style.display='none';
+}
+function clearInput(){document.getElementById('receipt-input').value='';resetParse();}
+
+function setStatus(msg,cls){const el=document.getElementById('status');el.textContent=msg;el.className='status-line'+(cls?' status-'+cls:'');}
+function setBadge(fmt){
+  const el=document.getElementById('fmt-badge');
+  if(fmt==='lidl')el.innerHTML='<span class="fmt fmt-lidl">Lidl</span>';
+  else if(fmt==='sgroup')el.innerHTML='<span class="fmt fmt-sgroup">S-ryhmä</span>';
+  else if(fmt==='plain')el.innerHTML='<span class="fmt fmt-plain">Vapaa</span>';
+  else el.innerHTML='';
+}
+
+function renderCurrentItems(){
+  const el=document.getElementById('item-list');
+  if(!currentItems.length){el.innerHTML='';return;}
+  el.innerHTML=currentItems.map((it,i)=>`
+    <div class="item-row">
+      <div class="iname">${esc(it.name)}</div>
+      <span class="badge ${badgeClass(it.owner)}" onclick="cycleCurrentItem(${i})">${label(it.owner)}</span>
+      <div class="iprice">€${it.price.toFixed(2)}</div>
+    </div>`).join('');
+}
+
+function cycleCurrentItem(i){currentItems[i].owner=nextOwner(currentItems[i].owner);renderCurrentItems();refreshMetrics();}
+
+// ── Save ──
+function saveReceipt(){
+  const month=document.getElementById('month-pick').value;
+  if(!month||!currentItems.length) return;
+  const meta=window._parsedMeta||{};
+  const rec={
+    id:uid(),
+    store:meta.store||'Kauppa',
+    date:meta.dateStr||new Date().toLocaleDateString('fi-FI'),
+    month,
+    items:currentItems.map(it=>({...it}))
+  };
+  receipts.unshift(rec);
+  persist();
+  setStatus('Tallennettu: '+rec.store+' '+rec.date,'ok');
+  document.getElementById('save-bar').style.display='none';
+  document.getElementById('receipt-input').value='';
+  setBadge(null);currentItems=[];window._parsedMeta=null;
+  renderCurrentItems();refreshMetrics();
+}
+
+// ── Metrics ──
+function refreshMetrics(){
+  const cur=curMonth();
+  const mt=monthTotals(cur);
+  const rt={me:0,wife:0,kids:0,shared:0};
+  currentItems.forEach(it=>rt[it.owner]=(rt[it.owner]||0)+it.price);
+  const has=currentItems.length>0;
+  ['me','wife','kids','shared'].forEach(o=>{
+    document.getElementById('r-'+o).textContent=has?'€'+rt[o].toFixed(2):'—';
+    document.getElementById('m-'+o).textContent='€'+(mt[o]||0).toFixed(2);
+  });
+}
+
+// ── Receipts tab ──
+function renderReceiptCard(rec){
+  const t={me:0,wife:0,kids:0,shared:0};
+  rec.items.forEach(it=>t[it.owner]=(t[it.owner]||0)+it.price);
+  const total=t.me+t.wife+t.kids+t.shared;
+  const p=o=>total?Math.max(t[o]/total*100,0).toFixed(1):0;
+  return `<div class="receipt-card" id="rc-${rec.id}">
+    <div class="rc-head">
+      <div><div class="rc-store">${esc(rec.store)}</div><div class="rc-date">${esc(rec.date)}</div></div>
+      <div class="rc-total">€${total.toFixed(2)}<small>${rec.items.length} tuotetta</small></div>
+    </div>
+    <div class="rc-bar">
+      <div style="width:${p('me')}%;background:var(--me)"></div>
+      <div style="width:${p('wife')}%;background:var(--wife)"></div>
+      <div style="width:${p('kids')}%;background:var(--kids)"></div>
+      <div style="width:${p('shared')}%;background:#b0b0a8"></div>
+    </div>
+    <button class="rc-toggle" onclick="toggleReceipt('${rec.id}')">Näytä rivit ▾</button>
+    <div class="rc-items" id="rci-${rec.id}">
+      ${rec.items.map((it,i)=>`
+        <div class="rc-item">
+          <div class="rc-iname">${esc(it.name)}</div>
+          <span class="badge ${badgeClass(it.owner)}" onclick="cycleReceiptItem('${rec.id}',${i})">${label(it.owner)}</span>
+          <div class="rc-iprice">€${it.price.toFixed(2)}</div>
+        </div>`).join('')}
+      <div class="rc-actions">
+        <button class="rc-del" onclick="deleteReceipt('${rec.id}')">🗑 Poista kuitti</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderReceiptsList(){
+  const el=document.getElementById('receipts-list');
+  if(!receipts.length){el.innerHTML='<p class="empty">Ei tallennettuja kuitteja.</p>';return;}
+
+  // group by month, sort months newest first
+  const byMonth={};
+  receipts.forEach(r=>{ if(!byMonth[r.month]) byMonth[r.month]=[]; byMonth[r.month].push(r); });
+  const months=Object.keys(byMonth).sort().reverse();
+
+  // within each month sort by date string newest first (dd.mm.yyyy)
+  function dateSortKey(rec){
+    const m=rec.date&&rec.date.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:rec.month;
+  }
+  months.forEach(m=>byMonth[m].sort((a,b)=>dateSortKey(b).localeCompare(dateSortKey(a))));
+
+  el.innerHTML=months.map(m=>{
+    const lbl=m===curMonth()?m+' · nykyinen kuukausi':m;
+    const mt=monthTotals(m);
+    const mTotal=(mt.me+mt.wife+mt.kids+mt.shared).toFixed(2);
+    return `<div class="month-group">
+      <div class="mg-header">
+        <span class="mg-label">${lbl}</span>
+        <span class="mg-total">€${mTotal}</span>
+      </div>
+      ${byMonth[m].map(renderReceiptCard).join('')}
+    </div>`;
+  }).join('');
+}
+
+function toggleReceipt(id){
+  const el=document.getElementById('rci-'+id);
+  const btn=el.previousElementSibling;
+  const open=el.classList.toggle('open');
+  btn.textContent=open?'Piilota rivit ▴':'Näytä rivit ▾';
+}
+
+function cycleReceiptItem(id,i){
+  const rec=receipts.find(r=>r.id===id);
+  if(!rec) return;
+  rec.items[i].owner=nextOwner(rec.items[i].owner);
+  persist();refreshMetrics();
+  // re-render just this card
+  const wasOpen=document.getElementById('rci-'+id).classList.contains('open');
+  renderReceiptsList();
+  if(wasOpen){
+    document.getElementById('rci-'+id).classList.add('open');
+    document.getElementById('rci-'+id).previousElementSibling.textContent='Piilota rivit ▴';
+  }
+  if(activeTab==='history') renderHistory();
+}
+
+function deleteReceipt(id){
+  if(!confirm('Poistetaanko tämä kuitti?')) return;
+  receipts=receipts.filter(r=>r.id!==id);
+  persist();renderReceiptsList();refreshMetrics();
+  if(activeTab==='history') renderHistory();
+}
+
+// ── History tab ──
+function renderHistory(){
+  const el=document.getElementById('history-list');
+  const months=allMonths();
+  if(!months.length){el.innerHTML='<p class="empty">Ei historiaa.</p>';return;}
+  el.innerHTML=months.map(m=>{
+    const t=monthTotals(m);
+    const total=t.me+t.wife+t.kids+t.shared;
+    if(!total) return '';
+    const p=o=>total?Math.max(t[o]/total*100,0).toFixed(1):0;
+    const label=m===curMonth()?m+' (nykyinen)':m;
+    const count=receipts.filter(r=>r.month===m).length;
+    return `<div class="month-card">
+      <div class="mh"><span class="mh-label">${label}</span><span class="mh-total">€${total.toFixed(2)}</span></div>
+      <div class="mbar">
+        <div class="mbar-me" style="width:${p('me')}%"></div>
+        <div class="mbar-wife" style="width:${p('wife')}%"></div>
+        <div class="mbar-kids" style="width:${p('kids')}%"></div>
+        <div class="mbar-shared" style="width:${p('shared')}%"></div>
+      </div>
+      <div class="mdetail">
+        <div class="mperson">Minä <b>€${t.me.toFixed(2)}</b></div>
+        <div class="mperson">Vaimo <b>€${t.wife.toFixed(2)}</b></div>
+        <div class="mperson">Lapset <b>€${t.kids.toFixed(2)}</b></div>
+        <div class="mperson">Yhteiset <b>€${t.shared.toFixed(2)}</b></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">${count} kuitti${count!==1?'a':''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Rules tab ──
+function renderRules(){
+  ['me','wife','kids'].forEach(own=>{
+    document.getElementById('tags-'+own).innerHTML=rules[own].map((k,i)=>`<span class="tag" onclick="removeRule('${own}',${i})">${esc(k)} ×</span>`).join('');
+  });
+}
+function removeRule(own,i){rules[own].splice(i,1);persistRules();renderRules();}
+function addRule(e,own){
+  if(e.key!=='Enter') return;
+  const val=e.target.value.trim().toLowerCase();
+  if(val&&!rules[own].includes(val)){rules[own].push(val);persistRules();}
+  e.target.value='';renderRules();
+}
+
+// ── Tab routing ──
+let activeTab='parse';
+function showTab(t){
+  activeTab=t;
+  ['parse','receipts','history','rules'].forEach((n,i)=>{
+    document.getElementById('tab-'+n).style.display=n===t?'':'none';
+    document.querySelectorAll('.tab-btn')[i].className='tab-btn'+(n===t?' active':'');
+  });
+  document.getElementById('save-bar').style.display=(t==='parse'&&currentItems.length)?'':'none';
+  if(t==='receipts') renderReceiptsList();
+  if(t==='history') renderHistory();
+  if(t==='rules') renderRules();
+}
+
+// ── Init ──
+document.getElementById('month-pick').value=curMonth();
+document.getElementById('month-pick').max=curMonth();
+refreshMetrics();
+</script>
+</body>
+</html>
